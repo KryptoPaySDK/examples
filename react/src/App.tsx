@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { KryptoPayModal } from "@kryptopay/sdk/react";
 import type { KryptoPayCheckoutOptions } from "@kryptopay/sdk";
 
@@ -22,11 +22,10 @@ const product: Product = {
 
 const API_BASE_URL = import.meta.env.VITE_KRYPTOPAY_API_BASE_URL as
   | string
-  | undefined; // http://localhost:3002
+  | undefined;
 const API_KEY = import.meta.env.VITE_KRYPTOPAY_API_KEY as string | undefined;
 
 type CreateIntentResponse = {
-  // API returns snake_case for this endpoint.
   client_secret?: string;
   id?: string;
   status?: string;
@@ -36,11 +35,6 @@ type CreateIntentResponse = {
 };
 
 export default function App() {
-  // UI state:
-  // - `open`: controls modal visibility
-  // - `clientSecret`: created on demand per checkout attempt
-  // - `loading`: disables pay button while creating intent
-  // - `log`: local event timeline for demo/debugging
   const [open, setOpen] = useState(false);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -50,16 +44,11 @@ export default function App() {
     setLog((prev) => [`${new Date().toLocaleTimeString()}  ${line}`, ...prev]);
   }
 
-  // Server step:
-  // Create an intent on your API, then hand only the returned client secret to the SDK modal.
-  // Note: API key in browser is for local demo only; use a backend in production.
   async function createIntent(): Promise<string> {
     if (!API_BASE_URL) throw new Error("Missing VITE_KRYPTOPAY_API_BASE_URL");
     if (!API_KEY) throw new Error("Missing VITE_KRYPTOPAY_API_KEY");
 
-    const url = `${API_BASE_URL}/v1/payment_intents`;
-
-    const res = await fetch(url, {
+    const res = await fetch(`${API_BASE_URL}/v1/payment_intents`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -93,7 +82,6 @@ export default function App() {
       setLoading(true);
       pushLog("Creating payment intent...");
 
-      // Create a fresh intent per click so each checkout has its own lifecycle.
       const cs = await createIntent();
       setClientSecret(cs);
 
@@ -107,12 +95,10 @@ export default function App() {
   }
 
   const checkoutOptions: Omit<KryptoPayCheckoutOptions, "clientSecret"> = {
-    // These options are static for this demo and spread into <KryptoPayModal />.
     merchantName: "KryptoPay Examples",
     defaultMethod: "wallet",
     allowWallet: true,
     allowManual: true,
-
     labels: {
       title: "Checkout",
       payWithWallet: "Pay with Wallet",
@@ -128,9 +114,7 @@ export default function App() {
       close: "Close",
       keepWaiting: "Keep waiting",
     },
-
     onClose: () => {
-      // Keep React state in sync when modal closes itself.
       pushLog("Modal closed");
       setOpen(false);
     },
@@ -138,12 +122,9 @@ export default function App() {
       pushLog(
         `Success: intentId=${e.payment_intent_id} tx=${e.tx_hash || "n/a"} chain=${e.chain} mode=${e.mode}`,
       );
-      // SDK handles success countdown + auto-close UX.
     },
     onAwaitingConfirmation: (e) => {
-      pushLog(
-        `Awaiting confirmation: intentId=${e.payment_intent_id}`,
-      );
+      pushLog(`Awaiting confirmation: intentId=${e.payment_intent_id}`);
     },
     onError: (e) => {
       pushLog(
@@ -219,10 +200,9 @@ export default function App() {
 
       {clientSecret ? (
         <KryptoPayModal
-          // Render only when we have a client secret from createIntent().
           open={open}
           clientSecret={clientSecret}
-          baseUrl={API_BASE_URL} // SDK will call resolve/poll against this
+          baseUrl={API_BASE_URL}
           {...checkoutOptions}
         />
       ) : null}
@@ -291,4 +271,3 @@ const logBoxStyle: React.CSSProperties = {
   lineHeight: 1.35,
   background: "rgba(0,0,0,0.02)",
 };
-

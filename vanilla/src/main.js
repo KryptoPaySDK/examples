@@ -1,7 +1,6 @@
 import "./style.css";
 import { openKryptoPayModal } from "@kryptopay/sdk";
 
-// Demo env config (provided through Vite .env files).
 const API_BASE_URL = import.meta.env.VITE_KRYPTOPAY_API_BASE_URL;
 const API_KEY = import.meta.env.VITE_KRYPTOPAY_API_KEY;
 
@@ -15,12 +14,10 @@ const product = {
     "https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
 };
 
-// Holds the current modal instance so we can track lifecycle in this page.
 /** @type {{ close: () => void, getState: () => unknown } | null} */
 let modalHandle = null;
 let loading = false;
 
-// Render simple product + logs UI.
 const app = document.querySelector("#app");
 app.innerHTML = `
   <header class="header">
@@ -62,7 +59,6 @@ const payBtn = document.querySelector("#pay-btn");
 const logBox = document.querySelector("#log-box");
 const emptyLog = document.querySelector("#empty-log");
 
-// Prepends newest entries so the latest SDK/API events are visible immediately.
 function pushLog(message) {
   if (emptyLog) emptyLog.style.display = "none";
   const line = document.createElement("div");
@@ -78,8 +74,6 @@ function setLoading(next) {
   payBtn.textContent = next ? "Preparing..." : "Pay";
 }
 
-// Server step: create a payment intent and return its client secret.
-// Note: API key in browser is local-demo only; production should proxy via backend.
 async function createIntent() {
   if (!API_BASE_URL) {
     throw new Error("Missing VITE_KRYPTOPAY_API_BASE_URL");
@@ -125,7 +119,6 @@ async function onPay() {
     const clientSecret = await createIntent();
     pushLog(`Intent created. clientSecret=${clientSecret}`);
 
-    // Client step: open modal with the newly created intent secret.
     modalHandle = openKryptoPayModal({
       clientSecret,
       baseUrl: API_BASE_URL,
@@ -149,12 +142,10 @@ async function onPay() {
         keepWaiting: "Keep waiting",
       },
       onClose: () => {
-        // SDK triggers this after controller close.
         pushLog("Modal closed");
         modalHandle = null;
       },
       onSuccess: (event) => {
-        // Success payload now includes tx hash, chain, and mode.
         pushLog(
           `Success: intentId=${event.payment_intent_id} tx=${event.tx_hash || "n/a"} chain=${event.chain} mode=${event.mode}`,
         );
