@@ -13,9 +13,9 @@ type Product = {
 const product: Product = {
   id: "hoodie-001",
   name: "KryptoPay Hoodie",
-  priceUsd: 20,
+  priceUsd: 0.5,
   description:
-    "One product, one button. Testing the real KryptoPay API + SDK modal.",
+    "One product, one button. The browser asks the local example server for a client secret, then opens the SDK modal.",
   imageUrl:
     "https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
 };
@@ -23,15 +23,11 @@ const product: Product = {
 const API_BASE_URL = import.meta.env.VITE_KRYPTOPAY_API_BASE_URL as
   | string
   | undefined;
-const API_KEY = import.meta.env.VITE_KRYPTOPAY_API_KEY as string | undefined;
+const CREATE_INTENT_ENDPOINT = "/api/create-intent";
+const SDK_BASE_URL = "";
 
 type CreateIntentResponse = {
-  client_secret?: string;
-  id?: string;
-  status?: string;
-  mode?: "testnet" | "mainnet";
-  chain?: "base" | "polygon";
-  amount_units?: number;
+  clientSecret?: string;
 };
 
 export default function App() {
@@ -46,18 +42,16 @@ export default function App() {
 
   async function createIntent(): Promise<string> {
     if (!API_BASE_URL) throw new Error("Missing VITE_KRYPTOPAY_API_BASE_URL");
-    if (!API_KEY) throw new Error("Missing VITE_KRYPTOPAY_API_KEY");
 
-    const res = await fetch(`${API_BASE_URL}/v1/payment_intents`, {
+    const res = await fetch(CREATE_INTENT_ENDPOINT, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${API_KEY}`,
       },
       body: JSON.stringify({
-        amount_units: Math.round(product.priceUsd * 1_000_000),
-        lane: "sdk",
+        amountUnits: Math.round(product.priceUsd * 1_000_000),
         chain: "polygon",
+        orderId: `demo_${Date.now()}`,
         metadata: { productId: product.id, productName: product.name },
       }),
     });
@@ -68,10 +62,10 @@ export default function App() {
     }
 
     const data = (await res.json()) as CreateIntentResponse;
-    const cs = data.client_secret;
+    const cs = data.clientSecret;
 
     if (!cs) {
-      throw new Error("Create intent response missing client_secret");
+      throw new Error("Create intent response missing clientSecret");
     }
 
     return cs;
@@ -80,12 +74,12 @@ export default function App() {
   async function onPay() {
     try {
       setLoading(true);
-      pushLog("Creating payment intent...");
+      pushLog("Creating payment intent through /api/create-intent...");
 
       const cs = await createIntent();
       setClientSecret(cs);
 
-      pushLog(`Intent created. clientSecret=${cs}`);
+      pushLog("Intent created. Opening checkout...");
       setOpen(true);
     } catch (err: unknown) {
       pushLog(`Error: ${err instanceof Error ? err.message : String(err)}`);
@@ -141,12 +135,14 @@ export default function App() {
             KryptoPay Examples
           </div>
           <div style={{ opacity: 0.75, marginTop: 4 }}>
-            React product page. Pay button calls API then opens modal.
+            React product page. Pay button calls a local server route then opens
+            modal.
           </div>
         </div>
 
         <div style={{ fontSize: 12, opacity: 0.75 }}>
-          API: <b>{API_BASE_URL ?? "missing"}</b>
+          API: <b>{API_BASE_URL ?? "missing"}</b> via{" "}
+          <b>{CREATE_INTENT_ENDPOINT}</b>
         </div>
       </header>
 
@@ -178,7 +174,8 @@ export default function App() {
             </div>
 
             <div style={{ marginTop: 10, fontSize: 12, opacity: 0.7 }}>
-              Using real API. API key comes from env (VITE_KRYPTOPAY_API_KEY).
+              Intent creation happens server-side in the Vite example server.
+              The browser only receives clientSecret.
             </div>
           </div>
         </section>
@@ -202,7 +199,7 @@ export default function App() {
         <KryptoPayModal
           open={open}
           clientSecret={clientSecret}
-          baseUrl={API_BASE_URL}
+          baseUrl={SDK_BASE_URL}
           {...checkoutOptions}
         />
       ) : null}

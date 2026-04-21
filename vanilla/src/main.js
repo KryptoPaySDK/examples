@@ -2,14 +2,15 @@ import "./style.css";
 import { openKryptoPayModal } from "@kryptopay/sdk";
 
 const API_BASE_URL = import.meta.env.VITE_KRYPTOPAY_API_BASE_URL;
-const API_KEY = import.meta.env.VITE_KRYPTOPAY_API_KEY;
+const CREATE_INTENT_ENDPOINT = "/api/create-intent";
+const SDK_BASE_URL = "";
 
 const product = {
   id: "hoodie-001",
   name: "KryptoPay Hoodie",
   priceUsd: 20,
   description:
-    "One product, one button. Testing the real KryptoPay API + SDK modal.",
+    "One product, one button. The browser asks the local example server for a client secret, then opens the SDK modal.",
   imageUrl:
     "https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
 };
@@ -24,10 +25,10 @@ app.innerHTML = `
     <div>
       <div style="font-size: 18px; font-weight: 700;">KryptoPay Examples</div>
       <div style="opacity: 0.75; margin-top: 4px;">
-        Vanilla JS product page. Pay button calls API then opens modal.
+        Vanilla JS product page. Pay button calls a local server route then opens modal.
       </div>
     </div>
-    <div class="muted">API: <b id="api-base">${API_BASE_URL ?? "missing"}</b></div>
+    <div class="muted">API: <b id="api-base">${API_BASE_URL ?? "missing"}</b> via <b>${CREATE_INTENT_ENDPOINT}</b></div>
   </header>
 
   <main class="main">
@@ -41,7 +42,7 @@ app.innerHTML = `
           <button id="pay-btn" class="pay-btn">Pay</button>
         </div>
         <div class="muted" style="margin-top: 10px;">
-          Using real API. API key comes from env (VITE_KRYPTOPAY_API_KEY).
+          Intent creation happens server-side in the Vite example server. The browser only receives clientSecret.
         </div>
       </div>
     </section>
@@ -78,20 +79,16 @@ async function createIntent() {
   if (!API_BASE_URL) {
     throw new Error("Missing VITE_KRYPTOPAY_API_BASE_URL");
   }
-  if (!API_KEY) {
-    throw new Error("Missing VITE_KRYPTOPAY_API_KEY");
-  }
 
-  const response = await fetch(`${API_BASE_URL}/v1/payment_intents`, {
+  const response = await fetch(CREATE_INTENT_ENDPOINT, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${API_KEY}`,
     },
     body: JSON.stringify({
-      amount_units: Math.round(product.priceUsd * 1_000_000),
-      lane: "sdk",
+      amountUnits: Math.round(product.priceUsd * 1_000_000),
       chain: "polygon",
+      orderId: `demo_${Date.now()}`,
       metadata: { productId: product.id, productName: product.name },
     }),
   });
@@ -102,11 +99,11 @@ async function createIntent() {
   }
 
   const data = await response.json();
-  if (!data?.client_secret) {
-    throw new Error("Create intent response missing client_secret");
+  if (!data?.clientSecret) {
+    throw new Error("Create intent response missing clientSecret");
   }
 
-  return data.client_secret;
+  return data.clientSecret;
 }
 
 async function onPay() {
@@ -114,14 +111,14 @@ async function onPay() {
 
   try {
     setLoading(true);
-    pushLog("Creating payment intent...");
+    pushLog("Creating payment intent through /api/create-intent...");
 
     const clientSecret = await createIntent();
-    pushLog(`Intent created. clientSecret=${clientSecret}`);
+    pushLog("Intent created. Opening checkout...");
 
     modalHandle = openKryptoPayModal({
       clientSecret,
-      baseUrl: API_BASE_URL,
+      baseUrl: SDK_BASE_URL,
       merchantName: "KryptoPay Examples",
       defaultMethod: "wallet",
       allowWallet: true,

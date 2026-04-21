@@ -13,7 +13,7 @@ Example integrations for the KryptoPay SDK.
 2. Copy `.env.example` to `.env`.
 3. Set:
    - `VITE_KRYPTOPAY_API_BASE_URL=http://localhost:3002`
-   - `VITE_KRYPTOPAY_API_KEY=kp_test_xxx`
+   - `KRYPTOPAY_API_KEY=kp_test_xxx`
 4. Run `npm run dev`.
 
-Both examples are wired for local development against your API host. For production, follow the backend flow described in the public docs.
+Both examples keep browser traffic same-origin during local dev: the Vite server creates intents via `/api/create-intent` and proxies `/v1/payment_intents/resolve` to `VITE_KRYPTOPAY_API_BASE_URL`.
