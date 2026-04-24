@@ -2,7 +2,7 @@ import { Buffer } from "node:buffer";
 
 const CREATE_INTENT_PATH = "/api/create-intent";
 const RESOLVE_INTENT_PATH = "/v1/payment_intents/resolve";
-const DEFAULT_API_BASE_URL = "https://api.kryptopay.xyz";
+const DEFAULT_API_BASE_URL = " http://localhost:3002";
 
 export function kryptopayIntentProxyPlugin({ env }) {
   return {
